@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-Deployment
+spec:
+  replicas: 4                             # тк в условии 4 пода справляются с максимальным трафиком
+  selector:
+    matchLabels:
+      app: web-app
+  strategy:
+    rollingUpdate:                        # для обеспечения максимальной доступности при обновлении подов. их 4 и обновляться будут по одному
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: web-app
+    spec:
+      containers:
+      - image: nginx 1.23
+        name: nginx
+        ports:
+        - containerPort: 80
+        readinessProbe:                    # для максимальной отказоустойчивости добавил все 3 пробы
+          failreTreshold: 3
+          httpGet:                         # тк в условии web-приложение 
+            path: /
+            port: 80
+          periodSeconds: 10
+          successTreshold: 1
+          timeoutSeconds: 5
+        livenessProbe:
+          failreTreshold: 3
+          httpGet:               
+            path: /
+            port: 80
+          periodSeconds: 30
+          successTreshold: 1
+          timeoutSeconds: 5
+          initialDelaySeconds: 10           # тк в условии 5-10 сек инициализацию
+        startupProbe: 
+          failreTreshold: 18   
+          httpGet: 
+            path: / 
+            port: 80
+          periodSeconds: 10
+        resources: 
+          requests:
+            cpu: 100m                      # также если отказоустойчивость приоритетнее чем потребление ресурсов, то можно указать одинаковое потребление 'cpu' для получения QoS Class Guaranteed. При котором приложение будет иметь приоритет выше, но в нашем случае будут зарезервированы излишние ресурсы cpu
+            memory: 128Mi
+          limits: 
+            cpu: 500m                      # предположим, что при запуске "значительно больше ресурсов" это в 5 раз, чем "в дальнейшем"
+            memory: 128Mi
+
+
+---
+
+apiVersion: autoscaling/v2                 # тк во 2й версии можно управлять политиками как для масштабирования вверх, так и вниз.
+
+
+kind: HorizontalPodAutoscaler              # тк у нас пик днем, а ночью запросов меньше, то на ночь количество подов будет падать до 2, а потом снова подниматься. Также поставим масштабирование не только в меньшую сторону, но и на всякий случай 2 пода сверх тех, которые держат пиковую нагрузку (4) 
+metadata: 
+  labels:
+    app: web-app
+  name: web-HPA
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: web-Deployment
+    metadata:
+      name: web-Deployment
+  minReplicas: 2
+  maxReplicas: 6
+  
+  behavior:
+    scaleDown:                            # если использование cpu падает до 50 % у нас падают поды до 2
+      stabilizationWindowSeconds: 300
+      politics:
+      - type: Percent
+        value: 50
+        periodSeconds: 20
+    scaleUp:                             # если использование cpu увеличивается до 138% поднимаются 6 подов. Значение взято из расчета на то что для 4 подов это будет 92%
+      stabilizationWindowSeconds: 30
+      politics: 
+      - type: Percent
+        value: 138
