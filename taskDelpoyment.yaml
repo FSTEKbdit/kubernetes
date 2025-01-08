@@ -73,7 +73,7 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: web-deployment
-  minReplicas: 2
+  minReplicas: 2                       # тк у нас 4 пода держат пиковую нагрузку, то минимум ставим 2, чтобы в ночное время откатывалось до этого состояния и для большей отказоустойчивости ставим масштабирование вверх до 6
   maxReplicas: 6
   
   behavior:
@@ -83,7 +83,7 @@ spec:
       - type: Percent
         value: 40
         periodSeconds: 20
-    scaleUp:                            # если использование cpu увеличивается до 140 % поднимаются 6 подов
+    scaleUp:                            # если использование cpu увеличивается до 140 % поднимаются 6 подов. Но если честно я не уверен, что правильно понял механику с % в масштабировании
       stabilizationWindowSeconds: 0
       policies: 
       - type: Percent
