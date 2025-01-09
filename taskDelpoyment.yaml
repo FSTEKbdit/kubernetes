@@ -77,16 +77,16 @@ spec:
   maxReplicas: 6
   
   behavior:
-    scaleDown:                          # если использование cpu падает до 40 % у нас падают поды до 2
+    scaleDown:                          # если использование cpu падает до 50 % у нас падают поды до 2
       stabilizationWindowSeconds: 300
       policies:
       - type: Percent
-        value: 40
+        value: 50
         periodSeconds: 20
-    scaleUp:                            # если использование cpu увеличивается до 140 % поднимаются 6 подов. Но если честно я не уверен, что правильно понял механику с % в масштабировании
+    scaleUp:                            # если использование cpu увеличивается до 90 % поднимаются 6 подов. Но если честно я не уверен, что правильно понял механику с % в масштабировании
       stabilizationWindowSeconds: 0
       policies: 
       - type: Percent
-        value: 140                 
+        value: 90                 
         periodSeconds: 10
 
